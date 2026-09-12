@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reverse Split Hunter</title>
+<!-- إعدادات "إضافة إلى الشاشة الرئيسية" — تفتح بملء الشاشة مثل تطبيق عادي -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RS Hunter">
+<meta name="theme-color" content="#0B0E14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B0E14'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%238B7CF6' font-family='monospace' font-weight='bold'%3ERS%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0B0E14; --panel:#131822; --panel2:#1A2029; --border:#232937;
+    --text:#E6EDF3; --dim:#8B949E; --dim2:#5B6472;
+    --ready:#3DDC97; --hot:#F97066; --coiled:#8B7CF6; --dormant:#6B7280;
+    --needs:#E3B341; --fail:#4B5563;
+    --mono: 'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
+    --sans: -apple-system,'Segoe UI',Inter,Tahoma,sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.5;
+  }
+  ::selection{background:var(--coiled); color:#0B0E14;}
+  .app{display:flex; flex-direction:column; height:100vh;}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    flex-wrap:wrap;
+  }
+  header h1{font-size:18px; font-weight:600; letter-spacing:0.2px;}
+  header .subtitle{color:var(--dim); font-size:12.5px; font-family:var(--mono);}
+
+  .kpis{
+    display:grid; grid-template-columns:repeat(9,1fr); gap:1px;
+    background:var(--border); border-bottom:1px solid var(--border);
+  }
+
+  .alerts-btn{
+    background:var(--panel); border:1px solid var(--border); color:var(--text);
+    padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;
+    font-family:var(--mono); flex-shrink:0;
+  }
+  .alerts-btn:hover{border-color:var(--needs);}
+  .alerts-panel{
+    display:none; border-bottom:1px solid var(--border); background:var(--panel);
+    max-height:220px; overflow-y:auto;
+  }
+  .alerts-panel.show{display:block;}
+  .alert-row{
+    display:flex; gap:12px; padding:9px 24px; border-bottom:1px solid var(--border);
+    font-size:12.5px; align-items:baseline;
+  }
+  .alert-row:last-child{border-bottom:none;}
+  .alert-row .at{font-family:var(--mono); color:var(--needs); flex-shrink:0; width:190px;}
+  .alert-row .am{color:var(--text); flex:1;}
+  .alert-row .ats{color:var(--dim2); font-family:var(--mono); font-size:11px; flex-shrink:0;}
+  .kpi{
+    background:var(--panel); padding:12px 14px; cursor:pointer;
+    transition:background .12s ease;
+  }
+  .kpi:hover{background:var(--panel2);}
+  .kpi.active{background:var(--panel2); box-shadow:inset 0 -2px 0 var(--coiled);}
+  .kpi .n{font-family:var(--mono); font-size:22px; font-weight:600; line-height:1.1;}
+  .kpi .l{color:var(--dim); font-size:11.5px; margin-top:4px;}
+
+  /* ---------- Body layout ---------- */
+  .body{flex:1; display:flex; min-height:0;}
+  aside{
+    width:230px; border-right:1px solid var(--border); padding:16px;
+    overflow-y:auto; flex-shrink:0;
+  }
+  aside h3{font-size:11.5px; color:var(--dim); font-weight:600; margin:16px 0 8px; }
+  aside h3:first-child{margin-top:0;}
+  .filter-group{display:flex; flex-direction:column; gap:4px;}
+  .chip{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:5px 8px; border-radius:5px; cursor:pointer; font-size:12.5px;
+    border:1px solid transparent; color:var(--dim);
+  }
+  .chip:hover{background:var(--panel);}
+  .chip.on{background:var(--panel2); border-color:var(--border); color:var(--text);}
+  .chip .count{font-family:var(--mono); color:var(--dim2); font-size:11px;}
+  input[type=text]{
+    width:100%; background:var(--panel); border:1px solid var(--border); color:var(--text);
+    padding:7px 9px; border-radius:6px; font-size:12.5px; font-family:var(--sans);
+  }
+  input[type=text]:focus{outline:none; border-color:var(--coiled);}
+  .reset-link{color:var(--dim2); font-size:11.5px; cursor:pointer; margin-top:14px; display:inline-block;}
+  .reset-link:hover{color:var(--text);}
+
+  main{flex:1; overflow:auto; min-width:0;}
+  .toolbar{
+    padding:10px 16px; border-bottom:1px solid var(--border); display:flex;
+    align-items:center; justify-content:space-between; color:var(--dim); font-size:12px;
+  }
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{
+    position:sticky; top:0; background:var(--bg); text-align:left; padding:8px 10px;
+    color:var(--dim); font-weight:500; font-size:11.5px; border-bottom:1px solid var(--border);
+    cursor:pointer; white-space:nowrap; user-select:none; z-index:1;
+  }
+  thead th:hover{color:var(--text);}
+  thead th.num, td.num{text-align:right; font-family:var(--mono);}
+  thead th .arrow{color:var(--coiled); margin-left:3px; font-size:10px;}
+  tbody tr{border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s;}
+  tbody tr:hover{background:var(--panel);}
+  tbody tr.selected{background:var(--panel2);}
+  td{padding:8px 10px; white-space:nowrap;}
+  td.ticker{font-family:var(--mono); font-weight:600;}
+  .company-name{color:var(--dim); font-size:11.5px; display:block; max-width:180px;
+    overflow:hidden; text-overflow:ellipsis;}
+
+  .badge{
+    display:inline-block; padding:2px 8px; border-radius:5px; font-size:11px;
+    font-weight:600; font-family:var(--mono); white-space:nowrap;
+  }
+  .b-HOT{background:#F9706622; color:var(--hot); border:1px solid #F9706655;}
+  .b-READY{background:#3DDC9722; color:var(--ready); border:1px solid #3DDC9755;}
+  .b-COILED{background:#8B7CF622; color:var(--coiled); border:1px solid #8B7CF655;}
+  .b-DORMANT{background:#6B728022; color:var(--dormant); border:1px solid #6B728055;}
+  .b-NEEDSBORROWCHECK{background:#E3B34122; color:var(--needs); border:1px solid #E3B34155;}
+  .b-NEEDSFLOATDATA{background:#6B728022; color:var(--dormant); border:1px solid #6B728055;}
+
+  .muted{color:var(--dim2);}
+  .pos{color:var(--ready);}
+  .neg{color:var(--hot);}
+
+  /* ---------- Detail panel ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none;
+    transition:opacity .18s ease; z-index:10;
+  }
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .panel{
+    position:fixed; top:0; right:0; height:100vh; width:460px; max-width:92vw;
+    background:var(--panel); border-left:1px solid var(--border);
+    transform:translateX(100%); transition:transform .2s ease; z-index:11;
+    overflow-y:auto; padding-bottom:40px;
+  }
+  .panel.show{transform:translateX(0);}
+  .panel-head{
+    padding:18px 20px; border-bottom:1px solid var(--border); position:sticky; top:0;
+    background:var(--panel); z-index:2;
+  }
+  .panel-head .row1{display:flex; align-items:center; justify-content:space-between;}
+  .panel-head .tk{font-family:var(--mono); font-size:20px; font-weight:700;}
+  .panel-head .cn{color:var(--dim); font-size:12.5px; margin-top:2px;}
+  .close-btn{
+    background:none; border:1px solid var(--border); color:var(--dim); width:28px; height:28px;
+    border-radius:6px; cursor:pointer; font-size:14px; line-height:1;
+  }
+  .close-btn:hover{color:var(--text); border-color:var(--dim);}
+
+  .section{padding:16px 20px; border-bottom:1px solid var(--border);}
+  .section h4{font-size:12px; color:var(--dim); font-weight:600; margin-bottom:10px;}
+  .why-list{list-style:none; display:flex; flex-direction:column; gap:6px;}
+  .why-list li{font-size:12.5px; padding-left:14px; position:relative; line-height:1.5;}
+  .why-list li::before{content:'—'; position:absolute; left:0; color:var(--dim2);}
+
+  .kv-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 16px;}
+  .kv .k{color:var(--dim); font-size:11px; margin-bottom:2px;}
+  .kv .v{font-family:var(--mono); font-size:13.5px;}
+
+  .hist-row{
+    display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--border);
+    font-size:12px;
+  }
+  .hist-row:last-child{border-bottom:none;}
+  .hist-row .t{color:var(--dim); font-family:var(--mono); font-size:11px; width:90px; flex-shrink:0;}
+  .hist-row .s{font-family:var(--mono); font-weight:600; width:70px; flex-shrink:0;}
+  .hist-row .r{color:var(--dim); flex:1;}
+
+  .empty{padding:60px 20px; text-align:center; color:var(--dim2); font-size:12.5px;}
+
+  /* ---------- Mobile ---------- */
+  .mobile-bar{display:none;}
+  .cards{display:none;}
+
+  @media (max-width:900px){
+    body{font-size:15px;}
+    header{padding:14px 16px 10px; padding-top:calc(14px + env(safe-area-inset-top));}
+    header h1{font-size:17px;}
+    .kpis{grid-template-columns:repeat(3,1fr);}
+    .kpi{padding:10px 12px;}
+    .kpi .n{font-size:19px;}
+    .kpi .l{font-size:10.5px;}
+    aside{display:none;}
+    table{display:none;}
+    .toolbar{padding:8px 16px;}
+
+    /* شريط فلاتر أفقي يعمل باللمس (بديل الشريط الجانبي المخفي) */
+    .mobile-bar{display:block; border-bottom:1px solid var(--border); padding:10px 12px;}
+    .mobile-bar input[type=text]{margin-bottom:8px; padding:9px 11px; font-size:15px;}
+    .chip-scroll{
+      display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;
+      -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    }
+    .chip-scroll::-webkit-scrollbar{display:none;}
+    .chip-scroll .chip{
+      flex-shrink:0; border:1px solid var(--border); background:var(--panel);
+      padding:7px 12px; font-size:12.5px; border-radius:20px;
+    }
+    .chip-scroll .chip.on{background:var(--panel2); color:var(--text); border-color:var(--coiled);}
+
+    /* بطاقات بدل الجدول — كل البيانات المهمة ظاهرة بدون تمرير أفقي */
+    .cards{display:block; padding:4px 12px 24px;}
+    .card{
+      background:var(--panel); border:1px solid var(--border); border-radius:10px;
+      padding:12px 14px; margin-bottom:8px;
+    }
+    .card:active{background:var(--panel2);}
+    .card-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+    .card-tk{font-family:var(--mono); font-weight:700; font-size:16px;}
+    .card-cn{color:var(--dim); font-size:12px; margin-top:2px;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .card-track{color:var(--dim); font-size:11px; font-family:var(--mono); margin-top:6px;}
+    .card-grid{
+      display:grid; grid-template-columns:repeat(3,1fr); gap:9px 8px; margin-top:11px;
+      padding-top:11px; border-top:1px solid var(--border);
+    }
+    .card-kv .k{color:var(--dim2); font-size:10.5px;}
+    .card-kv .v{font-family:var(--mono); font-size:13.5px; margin-top:1px;}
+
+    .panel{width:100%; max-width:100%;}
+    .panel-head{padding-top:calc(18px + env(safe-area-inset-top));}
+    .alert-row{padding:9px 16px; flex-wrap:wrap; gap:4px 10px;}
+    .alert-row .at{width:auto; font-size:11px;}
+    .alert-row .ats{width:100%;}
+    .kv-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Reverse Split Hunter</h1>
+      <div class="subtitle" id="subtitle">—</div>
+    </div>
+    <div class="subtitle" id="lastRun">—</div>
+    <button id="alertsBtn" class="alerts-btn">🔔 <span id="alertsCount">0</span></button>
+  </header>
+
+  <div class="alerts-panel" id="alertsPanel"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="body">
+    <aside>
+      <h3>Status</h3>
+      <div class="filter-group" id="f-status"></div>
+      <h3>Primary Track</h3>
+      <div class="filter-group" id="f-track"></div>
+      <h3>Exchange</h3>
+      <div class="filter-group" id="f-exchange"></div>
+      <input type="text" id="search" placeholder="Search ticker or company…" style="margin-top:16px;">
+      <span class="reset-link" id="resetFilters">Reset all filters</span>
+    </aside>
+
+    <main>
+      <div class="mobile-bar">
+        <input type="text" id="searchMobile" placeholder="Search ticker or company…">
+        <div class="chip-scroll" id="mobileChips"></div>
+      </div>
+      <div class="toolbar">
+        <span id="countLabel">—</span>
+        <span class="muted" id="toolbarHint">Click a row to open stock detail</span>
+      </div>
+      <table>
+        <thead>
+          <tr id="theadRow"></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="cards" id="cards"></div>
+      <div class="empty" id="emptyMsg" style="display:none;">No stocks match the current filters.</div>
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="panel" id="panel"></div>
+
+<script>
+/*__DATA__*/
+
+// ---------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------
+const COLUMNS = [
+  {key:'current_ticker', label:'Ticker', type:'text'},
+  {key:'company_name', label:'Company', type:'company'},
+  {key:'hunting_status', label:'Status', type:'badge'},
+  {key:'primary_track', label:'Track', type:'text'},
+  {key:'rs_age_days', label:'RS Age', type:'num'},
+  {key:'float_value_shares', label:'Float', type:'float'},
+  {key:'borrow_current', label:'Borrow', type:'int'},
+  {key:'ctb_current', label:'CTB %', type:'pct'},
+  {key:'rsi14', label:'RSI', type:'dec1'},
+  {key:'distance_52w_low_pct', label:'Dist 52W Low', type:'pctsigned'},
+  {key:'rvol', label:'RVOL', type:'dec2'},
+  {key:'overall_score', label:'Score', type:'dec0'},
+  {key:'exchange', label:'Exchange', type:'text'},
+];
+
+const STATUS_ORDER = ['HOT','READY','COILED','NEEDS BORROW CHECK','DORMANT','NEEDS FLOAT DATA'];
+
+let state = { status:new Set(), track:new Set(), exchange:new Set(), search:'', sortKey:'overall_score', sortDir:-1, selectedId:null };
+
+// ---------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------
+function fmt(val, type){
+  if(val===null || val===undefined || val==='') return '<span class="muted">—</span>';
+  switch(type){
+    case 'float': return Number(val).toLocaleString(undefined,{maximumFractionDigits:0});
+    case 'int': return Number(val).toLocaleString(undefined,{maximumFractionDigits:0});
+    case 'pct': return Number(val).toFixed(1)+'%';
+    case 'pctsigned': return (val>=0?'+':'')+Number(val).toFixed(1)+'%';
+    case 'dec1': return Number(val).toFixed(1);
+    case 'dec2': return Number(val).toFixed(2);
+    case 'dec0': return Number(val).toFixed(0);
+    default: return val;
+  }
+}
+function badgeClass(status){
+  return 'badge b-' + String(status||'').replace(/[^A-Z]/g,'');
+}
+function statusColorVar(status){
+  const map = {HOT:'--hot',READY:'--ready',COILED:'--coiled',DORMANT:'--dormant',
+    'NEEDS BORROW CHECK':'--needs','NEEDS FLOAT DATA':'--dormant'};
+  return map[status] || '--dim';
+}
+
+// ---------------------------------------------------------------------
+// KPI cards
+// ---------------------------------------------------------------------
+const KPI_DEFS = [
+  {key:'rs60', label:'RS Last 60 Days', filter:c=>c.rs_age_days!==null && c.rs_age_days<=60},
+  {key:'clean', label:'Clean Stocks', filter:c=>['CLEAN','NEEDS BORROW CHECK','HUNTING WATCHLIST'].includes(c.workflow_stage)},
+  {key:'float10', label:'Float <10M', filter:c=>!!c.float_priority},
+  {key:'nbc', label:'Needs Borrow Check', filter:c=>c.workflow_stage==='NEEDS BORROW CHECK'},
+  {key:'sp', label:'Short Pressure', filter:c=>c.primary_track==='SHORT PRESSURE'},
+  {key:'lfi', label:'Low-Float Ignition', filter:c=>c.primary_track==='LOW-FLOAT IGNITION'},
+  {key:'coiled', label:'COILED', filter:c=>c.hunting_status==='COILED'},
+  {key:'ready', label:'READY', filter:c=>c.hunting_status==='READY'},
+  {key:'hot', label:'HOT', filter:c=>c.hunting_status==='HOT'},
+];
+
+function renderKPIs(){
+  const el = document.getElementById('kpis');
+  el.innerHTML = KPI_DEFS.map(k=>{
+    const n = DATA.companies.filter(k.filter).length;
+    return `<div class="kpi" data-kpi="${k.key}"><div class="n">${n}</div><div class="l">${k.label}</div></div>`;
+  }).join('');
+}
+
+// ---------------------------------------------------------------------
+// Filters sidebar
+// ---------------------------------------------------------------------
+function buildFilterOptions(){
+  const statuses = {}; const tracks = {}; const exchanges = {};
+  DATA.companies.forEach(c=>{
+    if(c.hunting_status) statuses[c.hunting_status]=(statuses[c.hunting_status]||0)+1;
+    if(c.primary_track) tracks[c.primary_track]=(tracks[c.primary_track]||0)+1;
+    const ex = c.exchange || 'Unknown';
+    exchanges[ex]=(exchanges[ex]||0)+1;
+  });
+  renderChipGroup('f-status', statuses, state.status, STATUS_ORDER);
+  renderChipGroup('f-track', tracks, state.track);
+  renderChipGroup('f-exchange', exchanges, state.exchange);
+  renderMobileChips(statuses, tracks);
+}
+
+// شريط فلاتر الجوال: الحالة + المسار في صف أفقي واحد (الشريط الجانبي مخفي على الجوال)
+function renderMobileChips(statuses, tracks){
+  const el = document.getElementById('mobileChips');
+  const parts = [];
+  STATUS_ORDER.filter(k=>statuses[k]!==undefined).forEach(k=>{
+    parts.push(`<div class="chip ${state.status.has(k)?'on':''}" data-kind="status" data-key="${k}">${k} ${statuses[k]}</div>`);
+  });
+  Object.keys(tracks).sort().forEach(k=>{
+    const short = k.replace('LOW-FLOAT ','LF ').replace('SHORT PRESSURE','SHORT PR.');
+    parts.push(`<div class="chip ${state.track.has(k)?'on':''}" data-kind="track" data-key="${k}">${short} ${tracks[k]}</div>`);
+  });
+  el.innerHTML = parts.join('');
+  el.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const set = chip.dataset.kind==='status' ? state.status : state.track;
+      const k = chip.dataset.key;
+      if(set.has(k)) set.delete(k); else set.add(k);
+      renderAll();
+    });
+  });
+}
+function renderChipGroup(elId, counts, selectedSet, order){
+  const keys = order ? order.filter(k=>counts[k]!==undefined) : Object.keys(counts).sort();
+  const el = document.getElementById(elId);
+  el.innerHTML = keys.map(k=>{
+    const on = selectedSet.has(k);
+    return `<div class="chip ${on?'on':''}" data-key="${k}">
+      <span>${k}</span><span class="count">${counts[k]}</span></div>`;
+  }).join('');
+  el.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const k = chip.dataset.key;
+      if(selectedSet.has(k)) selectedSet.delete(k); else selectedSet.add(k);
+      renderAll();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------
+function getFiltered(){
+  let rows = DATA.companies.filter(c=>{
+    if(state.status.size && !state.status.has(c.hunting_status)) return false;
+    if(state.track.size && !state.track.has(c.primary_track)) return false;
+    if(state.exchange.size && !state.exchange.has(c.exchange||'Unknown')) return false;
+    if(state.search){
+      const s = state.search.toUpperCase();
+      const hay = (c.current_ticker||'') + ' ' + (c.company_name||'');
+      if(!hay.toUpperCase().includes(s)) return false;
+    }
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let av=a[state.sortKey], bv=b[state.sortKey];
+    if(av===null||av===undefined) av = -Infinity;
+    if(bv===null||bv===undefined) bv = -Infinity;
+    if(typeof av==='string') return av.localeCompare(bv) * state.sortDir;
+    return (av-bv) * state.sortDir;
+  });
+  return rows;
+}
+
+function renderTableHead(){
+  const tr = document.getElementById('theadRow');
+  tr.innerHTML = COLUMNS.map(col=>{
+    const numeric = ['num','float','int','pct','pctsigned','dec1','dec2','dec0'].includes(col.type);
+    const arrow = state.sortKey===col.key ? `<span class="arrow">${state.sortDir===1?'▲':'▼'}</span>` : '';
+    return `<th class="${numeric?'num':''}" data-key="${col.key}">${col.label}${arrow}</th>`;
+  }).join('');
+  tr.querySelectorAll('th').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(state.sortKey===key) state.sortDir *= -1;
+      else { state.sortKey=key; state.sortDir=-1; }
+      renderAll();
+    });
+  });
+}
+
+// عرض الجوال: بطاقات بدل جدول (لتفادي التمرير الأفقي وإخفاء الأعمدة)
+function renderCards(rows){
+  const el = document.getElementById('cards');
+  el.innerHTML = rows.map(c=>{
+    const kv = (k,v)=>`<div class="card-kv"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    return `<div class="card" data-id="${c.company_id}">
+      <div class="card-top">
+        <div style="min-width:0;">
+          <div class="card-tk">${c.current_ticker||'—'}</div>
+          <div class="card-cn">${c.company_name||''}</div>
+        </div>
+        <span class="${badgeClass(c.hunting_status)}">${c.hunting_status||'—'}</span>
+      </div>
+      <div class="card-track">${c.primary_track||''}</div>
+      <div class="card-grid">
+        ${kv('Float', fmt(c.float_value_shares,'float'))}
+        ${kv('Borrow', fmt(c.borrow_current,'int'))}
+        ${kv('CTB', fmt(c.ctb_current,'pct'))}
+        ${kv('RSI', fmt(c.rsi14,'dec1'))}
+        ${kv('RS Age', c.rs_age_days!=null? c.rs_age_days+'d' : '<span class="muted">—</span>')}
+        ${kv('52W Low', fmt(c.distance_52w_low_pct,'pctsigned'))}
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.card').forEach(card=>{
+    card.addEventListener('click', ()=> openDetail(Number(card.dataset.id)));
+  });
+}
+
+function renderTableBody(rows){
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('emptyMsg');
+  document.getElementById('countLabel').textContent = `${rows.length} of ${DATA.companies.length} stocks`;
+  renderCards(rows);
+  if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  tbody.innerHTML = rows.map(c=>{
+    const cells = COLUMNS.map(col=>{
+      if(col.key==='current_ticker') return `<td class="ticker">${c.current_ticker||'—'}</td>`;
+      if(col.key==='company_name') return `<td><span class="company-name">${c.company_name||'—'}</span></td>`;
+      if(col.type==='badge') return `<td><span class="${badgeClass(c[col.key])}">${c[col.key]||'—'}</span></td>`;
+      const numeric = ['num','float','int','pct','pctsigned','dec1','dec2','dec0'].includes(col.type);
+      return `<td class="${numeric?'num':''}">${fmt(c[col.key], col.type)}</td>`;
+    }).join('');
+    return `<tr data-id="${c.company_id}" class="${state.selectedId===c.company_id?'selected':''}">${cells}</tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    tr.addEventListener('click', ()=> openDetail(Number(tr.dataset.id)));
+  });
+}
+
+// ---------------------------------------------------------------------
+// Detail panel
+// ---------------------------------------------------------------------
+function buildWhyList(c){
+  const items = [];
+  if(c.rs_age_days!==null) items.push(`Reverse Split ${c.rs_age_days} days ago (${c.rs_effective_date||'N/A'}, ratio ${c.rs_ratio||'N/A'})`);
+  if(c.float_value_shares!==null) items.push(`Float: ${Number(c.float_value_shares).toLocaleString()} shares (${c.float_priority||'N/A'})`);
+  if(c.distance_52w_low_pct!==null) items.push(`Price is ${Number(c.distance_52w_low_pct).toFixed(1)}% above 52W Low`);
+  if(c.rsi14!==null) items.push(`RSI(14) = ${Number(c.rsi14).toFixed(1)}`);
+  if(c.short_pressure_reason) items.push(`Short Pressure: ${c.short_pressure_reason}`);
+  if(c.ignition_reason) items.push(`Low-Float Ignition: ${c.ignition_reason}`);
+  if(c.workflow_gap) items.push(`⚠ ${c.workflow_gap}`);
+  return items;
+}
+
+function openDetail(companyId){
+  const c = DATA.companies.find(x=>x.company_id===companyId);
+  if(!c) return;
+  state.selectedId = companyId;
+
+  const tickers = DATA.ticker_history.filter(t=>t.company_id===companyId).map(t=>t.ticker);
+  const history = DATA.status_history.filter(s=>s.company_id===companyId).sort((a,b)=>a.id-b.id);
+  const snaps = DATA.snapshots.filter(s=>s.company_id===companyId);
+
+  const why = buildWhyList(c);
+  const color = `var(${statusColorVar(c.hunting_status)})`;
+
+  document.getElementById('panel').innerHTML = `
+    <div class="panel-head">
+      <div class="row1">
+        <div>
+          <div class="tk">${c.current_ticker}</div>
+          <div class="cn">${c.company_name||''}</div>
+        </div>
+        <button class="close-btn" id="closePanel">✕</button>
+      </div>
+      <div style="margin-top:10px;"><span class="${badgeClass(c.hunting_status)}">${c.hunting_status||'—'}</span>
+        <span class="muted" style="margin-left:8px; font-size:11.5px;">${c.workflow_stage||''}</span></div>
+    </div>
+
+    <div class="section">
+      <h4>Why is this stock on the list?</h4>
+      <ul class="why-list">${why.map(w=>`<li>${w}</li>`).join('') || '<li class="muted">No data yet</li>'}</ul>
+    </div>
+
+    <div class="section">
+      <h4>Identity</h4>
+      <div class="kv-grid">
+        <div class="kv"><div class="k">Ticker History</div><div class="v">${tickers.join(', ')||'—'}</div></div>
+        <div class="kv"><div class="k">Exchange</div><div class="v">${c.exchange||'—'}</div></div>
+        <div class="kv"><div class="k">Country</div><div class="v">${c.country||'—'}</div></div>
+        <div class="kv"><div class="k">Primary Track</div><div class="v">${c.primary_track||'—'}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Reverse Split &amp; Supply</h4>
+      <div class="kv-grid">
+        <div class="kv"><div class="k">RS Date</div><div class="v">${c.rs_effective_date||'—'}</div></div>
+        <div class="kv"><div class="k">RS Age</div><div class="v">${c.rs_age_days??'—'} days</div></div>
+        <div class="kv"><div class="k">RS Ratio</div><div class="v">${c.rs_ratio||'—'}</div></div>
+        <div class="kv"><div class="k">RS Window</div><div class="v">${c.rs_window||'—'}</div></div>
+        <div class="kv"><div class="k">Float</div><div class="v">${c.float_value_shares? Number(c.float_value_shares).toLocaleString():'—'}</div></div>
+        <div class="kv"><div class="k">Float Priority</div><div class="v">${c.float_priority||'—'}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Borrow / CTB / Short Interest</h4>
+      <div class="kv-grid">
+        <div class="kv"><div class="k">Borrow Current</div><div class="v">${c.borrow_current!=null?Number(c.borrow_current).toLocaleString():'—'}</div></div>
+        <div class="kv"><div class="k">Borrow Previous</div><div class="v">${c.borrow_previous!=null?Number(c.borrow_previous).toLocaleString():'—'}</div></div>
+        <div class="kv"><div class="k">CTB Current</div><div class="v">${c.ctb_current!=null?c.ctb_current+'%':'—'}</div></div>
+        <div class="kv"><div class="k">CTB Previous</div><div class="v">${c.ctb_previous!=null?c.ctb_previous+'%':'—'}</div></div>
+        <div class="kv"><div class="k">Short Interest (M)</div><div class="v">${c.short_interest_m??'—'}</div></div>
+        <div class="kv"><div class="k">Short Float %</div><div class="v">${c.short_float??'—'}</div></div>
+        <div class="kv"><div class="k">Borrow Role</div><div class="v" style="font-family:var(--sans); font-size:12px;">${c.borrow_gate||'—'}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Technical</h4>
+      <div class="kv-grid">
+        <div class="kv"><div class="k">Price</div><div class="v">${c.price??'—'}</div></div>
+        <div class="kv"><div class="k">RSI(14)</div><div class="v">${c.rsi14!=null?Number(c.rsi14).toFixed(1):'—'}</div></div>
+        <div class="kv"><div class="k">52W Low</div><div class="v">${c.week52_low??'—'}</div></div>
+        <div class="kv"><div class="k">Distance from 52W Low</div><div class="v">${c.distance_52w_low_pct!=null?Number(c.distance_52w_low_pct).toFixed(1)+'%':'—'}</div></div>
+        <div class="kv"><div class="k">RVOL</div><div class="v">${c.rvol!=null?Number(c.rvol).toFixed(2):'—'}</div></div>
+        <div class="kv"><div class="k">Float Turnover</div><div class="v">${c.float_turnover!=null?(Number(c.float_turnover)*100).toFixed(1)+'%':'—'}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Snapshot History (${snaps.length} reading${snaps.length===1?'':'s'})</h4>
+      ${snaps.length<2 ? '<div class="muted" style="font-size:12px;">Only one snapshot recorded so far — history charts appear after the next data refresh.</div>' :
+        snaps.map(s=>`<div class="hist-row"><span class="t">${s.snapshot_date||'—'}</span>
+          <span class="s">Borrow ${s.borrow_current??'—'}</span>
+          <span class="r">CTB ${s.ctb_current??'—'}% · RSI ${s.rsi14??'—'}</span></div>`).join('')}
+    </div>
+
+    <div class="section">
+      <h4>Status History</h4>
+      ${history.length===0 ? '<div class="muted" style="font-size:12px;">No status history yet.</div>' :
+        history.slice().reverse().map(h=>`
+        <div class="hist-row">
+          <span class="t">${(h.changed_at||'').replace('T',' ').slice(0,16)}</span>
+          <span class="s" style="color:${`var(${statusColorVar(h.status)})`}">${h.status||'—'}</span>
+          <span class="r">${h.reason_text||h.primary_track||''}</span>
+        </div>`).join('')}
+    </div>
+  `;
+
+  document.getElementById('closePanel').addEventListener('click', closeDetail);
+  document.getElementById('panel').classList.add('show');
+  document.getElementById('overlay').classList.add('show');
+  renderTableBody(getFiltered()); // to refresh 'selected' highlight
+}
+
+function closeDetail(){
+  state.selectedId = null;
+  document.getElementById('panel').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  renderTableBody(getFiltered());
+}
+document.getElementById('overlay').addEventListener('click', closeDetail);
+
+// ---------------------------------------------------------------------
+// Wire up static controls
+// ---------------------------------------------------------------------
+function wireSearch(id, otherId){
+  document.getElementById(id).addEventListener('input', (e)=>{
+    state.search = e.target.value;
+    const other = document.getElementById(otherId);
+    if(other && other.value !== e.target.value) other.value = e.target.value;
+    renderAll(true);
+  });
+}
+wireSearch('search', 'searchMobile');
+wireSearch('searchMobile', 'search');
+
+document.getElementById('resetFilters').addEventListener('click', ()=>{
+  state.status.clear(); state.track.clear(); state.exchange.clear(); state.search='';
+  document.getElementById('search').value='';
+  document.getElementById('searchMobile').value='';
+  renderAll();
+});
+
+function renderAll(skipFilters){
+  if(!skipFilters) buildFilterOptions();
+  renderTableHead();
+  renderTableBody(getFiltered());
+}
+
+// ---------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------
+document.getElementById('subtitle').textContent =
+  `${DATA.companies.length} companies tracked · Micro-Cap Reverse-Split Hunting System`;
+document.getElementById('lastRun').textContent =
+  'Snapshot as of ' + (DATA.companies.reduce((max,c)=> (c.updated_at||'') > max ? c.updated_at : max, '') || '—').replace('T',' ').slice(0,16);
+
+function renderAlertsPanel(){
+  const sorted = DATA.alerts.slice().sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||''));
+  document.getElementById('alertsCount').textContent = sorted.length;
+  const panel = document.getElementById('alertsPanel');
+  if(sorted.length===0){
+    panel.innerHTML = '<div class="alert-row"><span class="am muted">No alerts yet.</span></div>';
+    return;
+  }
+  panel.innerHTML = sorted.map(a=>{
+    const c = DATA.companies.find(x=>x.company_id===a.company_id);
+    const ticker = c ? c.current_ticker : '';
+    return `<div class="alert-row">
+      <span class="at">${a.alert_type}</span>
+      <span class="am">${ticker ? '<b>'+ticker+'</b> — ' : ''}${a.message}</span>
+      <span class="ats">${(a.created_at||'').replace('T',' ').slice(0,16)}</span>
+    </div>`;
+  }).join('');
+}
+if(window.matchMedia('(max-width:900px)').matches){
+  document.getElementById('toolbarHint').textContent = 'Tap a card for details';
+}
+
+renderAlertsPanel();
+document.getElementById('alertsBtn').addEventListener('click', ()=>{
+  document.getElementById('alertsPanel').classList.toggle('show');
+});
+
+renderKPIs();
+buildFilterOptions();
+renderAll(true);
+
+document.querySelectorAll('.kpi').forEach((el, i)=>{
+  el.addEventListener('click', ()=>{
+    const def = KPI_DEFS[i];
+    // Map KPI clicks to relevant quick-filters
+    const map = {
+      nbc: ()=>{state.status.clear(); state.status.add('NEEDS BORROW CHECK');},
+      sp: ()=>{state.track.clear(); state.track.add('SHORT PRESSURE');},
+      lfi: ()=>{state.track.clear(); state.track.add('LOW-FLOAT IGNITION');},
+      coiled: ()=>{state.status.clear(); state.status.add('COILED');},
+      ready: ()=>{state.status.clear(); state.status.add('READY');},
+      hot: ()=>{state.status.clear(); state.status.add('HOT');},
+    };
+    if(map[def.key]){ map[def.key](); renderAll(); }
+  });
+});
+</script>
+</body>
+</html>
