@@ -143,7 +143,7 @@ READY_MIN_IMPROVING_FACTORS = 2
 # SEC EDGAR يشترط User-Agent وصفي يحوي اسم جهة ووسيلة تواصل، وإلا يُحظر الطلب.
 # غيّر هذا القيمة قبل تشغيل sec_monitor.py فعليًا — راجع:
 # https://www.sec.gov/os/webmaster-faq#developers
-SEC_USER_AGENT = "ReverseSplitHunter contact@example.com"  # ⚠️ غيّرها لبريدك الحقيقي قبل الاستخدام
+SEC_USER_AGENT = "ReverseSplitHunter m-alomran@outlook.com"  # ⚠️ غيّرها لبريدك الحقيقي قبل الاستخدام
 
 SEC_FORM_TYPES = ["8-K", "6-K", "S-1", "F-1", "424B", "EFFECT", "DEF 14A", "20-F"]
 
